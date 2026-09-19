@@ -1,4 +1,3 @@
-from conftest import Clock
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
@@ -7,6 +6,7 @@ from rate_limiter.core import FixedWindowCounter
 from rate_limiter.core.limiter import RateLimiter
 from rate_limiter.server.fastapi_dependency import rate_limit
 from rate_limiter.server.keys import by_header
+from tests.conftest import Clock
 
 
 def make_app(limit: int = 2, **kwargs: object) -> TestClient:
