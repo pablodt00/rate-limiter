@@ -86,7 +86,7 @@ backend — not the algorithm — owns atomic load → update → persist per ke
 - **`InMemoryBackend`**: stdlib only; one `threading.Lock` around a `dict[str, dict]`. The single global lock
   serializes all keys — an intentional v1 simplification, fine for single-process use. Covered by a
   multi-threaded regression test asserting admitted count never exceeds the allowance.
-- **`RedisBackend`** (`rate-limiter[redis]`): Lua scripts via `register_script`/`EVALSHA` for atomicity
+- **`RedisBackend`** (`fastapi-ratelimit-kit[redis]`): Lua scripts via `register_script`/`EVALSHA` for atomicity
   (`MULTI`/`EXEC` cannot express read-then-conditionally-write without a slow `WATCH` retry loop). State in a
   hash with a TTL of a couple of window lengths so abandoned keys expire. Scripts for all three algorithms.
   Constructed as `RedisBackend(client, async_client=None)` from clients the caller already built, so the module
@@ -138,7 +138,7 @@ same object.
 - CI: GitHub Actions matrix, `ruff check`, `mypy src`, `pytest --cov=rate_limiter`; `fakeredis` by default, an
   optional non-blocking job with a real Redis service for integration tests.
 - Packaging: extras `fastapi`, `redis`, `httpx`, `requests`, `dev`, `all`; resolve the PyPI distribution name
-  (`rate-limiter` may be taken) before first publish.
+  (`fastapi-ratelimit-kit`; `rate-limiter` is taken on PyPI) before first publish.
 
 ## Epic / issue breakdown
 
