@@ -57,10 +57,16 @@ def check_and_update(self, state: dict | None, now: float, cost: int = 1) -> tup
 
 - No I/O, no clock reads (`now` is passed in), no mutation of the input `state`. Fully unit-testable with
   fabricated timestamps.
-- `TokenBucket(rate, capacity)` — state `{tokens, last_refill}`; bursts up to `capacity`.
-- `SlidingWindowCounter(limit, window_seconds)` — approximated sliding window, O(1) state (no timestamp log).
-- `FixedWindowCounter(limit, window_seconds)` — simplest; good for quotas like "1000/day" and as a
-  correctness baseline for backend tests.
+- `Algorithm` is a `Protocol` (in `core/algorithms.py`) with exactly that method; algorithms are frozen
+  dataclasses that validate their config (`ValueError` unless positive) and `cost >= 1`.
+- `TokenBucket(rate, capacity)` — state `{tokens, last_refill}`; starts full, bursts up to `capacity`.
+- `SlidingWindowCounter(limit, window_seconds)` — approximated sliding window, O(1) state
+  `{window, current, previous}` (no timestamp log); `retry_after` is computed exactly.
+- `FixedWindowCounter(limit, window_seconds)` — simplest; state `{window, count}` with epoch-aligned windows
+  (a one-day window resets at midnight UTC); good for quotas like "1000/day" and as a correctness baseline for
+  backend tests.
+- A denied request consumes nothing. A `cost` that can never fit (above `capacity`/`limit`) is denied with
+  `retry_after=None`, meaning "never".
 
 ## Backends (Epic 2)
 

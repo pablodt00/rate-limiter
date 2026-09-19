@@ -20,7 +20,8 @@ ruff check                  # lint
 mypy src                    # type-check
 ```
 
-Run all three before opening a PR (Claude Code users: the `/check` skill does this).
+Run all three before opening a PR (Claude Code users: the `/check` skill does this). When behavior, layout or
+commands change, update the markdown docs too (`/sync-docs` does this).
 
 ## Optional extras
 
