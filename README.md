@@ -14,7 +14,7 @@ Work in progress. Here is what exists today:
 | Area | Status |
 | --- | --- |
 | Core algorithms (token bucket, sliding window, fixed window) | Done |
-| Storage backends (in-memory, Redis) | Planned |
+| Storage backends (in-memory, Redis) | Done |
 | `RateLimiter` facade | Planned |
 | Client-side helpers (header parsing, backoff, decorators) | Planned |
 | FastAPI integration (dependency, middleware) | Planned |
@@ -27,8 +27,8 @@ Requires Python 3.10+. Not published yet, so install from a checkout:
 pip install -e .
 ```
 
-Optional extras for Redis, FastAPI and async HTTP clients are planned; see
-[CONTRIBUTING.md](CONTRIBUTING.md).
+For the Redis backend, install the extra: `pip install -e ".[redis]"`. Extras for FastAPI and async HTTP clients
+are planned; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Using the algorithms
 
@@ -47,6 +47,27 @@ for now in (0, 0, 0, 0, 2):
 
 `SlidingWindowCounter(limit, window_seconds)` and `FixedWindowCounter(limit, window_seconds)` work the same way.
 A request whose cost can never fit is denied with `retry_after=None`.
+
+## Using a backend
+
+A backend keeps each key's state and applies an algorithm to it atomically, so concurrent callers can't slip past
+the limit. `InMemoryBackend` is stdlib-only and process-local; `RedisBackend` shares limits across processes.
+
+```python
+import time
+
+from rate_limiter.backends import InMemoryBackend
+from rate_limiter.core import FixedWindowCounter
+
+backend = InMemoryBackend()
+limit = FixedWindowCounter(limit=2, window_seconds=60)
+for _ in range(3):
+    print(backend.increment("user:42", limit, now=time.time()).allowed)  # True, True, False
+```
+
+`RedisBackend(redis.Redis(), async_client=redis.asyncio.Redis())` (from `rate_limiter.backends.redis`) takes
+clients you have already built; the async client is only needed for `aincrement`. Both backends also offer
+`peek` (look without consuming) and `reset`.
 
 ## Learn more
 

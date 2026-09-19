@@ -87,7 +87,8 @@ backend — not the algorithm — owns atomic load → update → persist per ke
 - **`RedisBackend`** (`rate-limiter[redis]`): Lua scripts via `register_script`/`EVALSHA` for atomicity
   (`MULTI`/`EXEC` cannot express read-then-conditionally-write without a slow `WATCH` retry loop). State in a
   hash with a TTL of a couple of window lengths so abandoned keys expire. Scripts for all three algorithms.
-  True async path via `redis.asyncio` (in `redis-py>=4.2`; not the deprecated `aioredis`). Tested with
+  Constructed as `RedisBackend(client, async_client=None)` from clients the caller already built, so the module
+  never imports `redis` itself. True async path via `redis.asyncio` (in `redis-py>=4.2`; not the deprecated `aioredis`). Tested with
   `fakeredis`; an env-gated `@pytest.mark.integration` suite runs against a real Redis.
 
 ## Facade (Epic 3)
