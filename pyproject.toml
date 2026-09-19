@@ -13,6 +13,9 @@ dependencies = []
 
 [project.optional-dependencies]
 redis = ["redis>=4.2"]
+fastapi = ["fastapi>=0.100"]
+httpx = ["httpx>=0.24"]
+requests = ["requests>=2.28"]
 dev = [
     "pytest",
     "pytest-asyncio",
@@ -21,6 +24,10 @@ dev = [
     "mypy",
     "redis>=4.2",
     "fakeredis[lua]",
+    "fastapi>=0.100",
+    "httpx>=0.24",
+    "requests>=2.28",
+    "types-requests",
 ]
 
 [tool.hatch.build.targets.wheel]
