@@ -58,6 +58,10 @@ service container.
 The PyPI distribution name is `fastapi-ratelimit-kit` (`rate-limiter` is already taken; the new name was checked
 as free on 2026-09-20). The import package stays `rate_limiter`.
 
+`.github/workflows/publish.yml` builds the package and uploads it to PyPI when a GitHub Release is published. It
+reads the PyPI API token from the repository secret `PYPI_API_TOKEN`, which must be set before the first release.
+Bump `version` in `pyproject.toml` before tagging.
+
 ## Branches and PRs
 
 - Branch per epic, named `RL-<epic number>` (e.g. `RL-1`); one focused change per issue.
