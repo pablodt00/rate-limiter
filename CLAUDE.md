@@ -31,4 +31,5 @@ mypy src                     # type-check
 pytest --cov=rate_limiter    # tests
 ```
 
-The `/check` skill runs all three. See [CONTRIBUTING.md](CONTRIBUTING.md) for more.
+The `/check` skill runs all three; `/sync-docs` refreshes the markdown docs; `/plan-issue <link>` plans an issue
+or epic. See [CONTRIBUTING.md](CONTRIBUTING.md) for more.
