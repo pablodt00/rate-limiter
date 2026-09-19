@@ -12,11 +12,15 @@ requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
+redis = ["redis>=4.2"]
 dev = [
     "pytest",
+    "pytest-asyncio",
     "pytest-cov",
     "ruff",
     "mypy",
+    "redis>=4.2",
+    "fakeredis[lua]",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -32,3 +36,7 @@ files = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "strict"
+markers = [
+    "integration: needs a real Redis; set RATE_LIMITER_REDIS_URL to run (skipped otherwise)",
+]
