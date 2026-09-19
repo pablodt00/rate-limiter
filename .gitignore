@@ -1,0 +1,26 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Environments
+.venv/
+venv/
+env/
+
+# Testing / coverage
+.coverage
+.coverage.*
+htmlcov/
+
+# Editors
+.idea/
+.vscode/

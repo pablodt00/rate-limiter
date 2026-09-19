@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rate-limiter"
+version = "0.0.0"
+description = "A rate limiter library with pluggable algorithms, backends, and server/client."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rate_limiter"]
+
+[tool.ruff]
+src = ["src", "tests"]
+line-length = 100
+
+[tool.mypy]
+strict = true
+files = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
