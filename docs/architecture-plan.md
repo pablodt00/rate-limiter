@@ -132,8 +132,9 @@ same object.
 ## Docs, testing, CI (Epics 6–8)
 
 - Examples: `examples/fastapi_app.py`, `client_sync_requests.py`, `client_async_httpx.py`; top-level README.
-- E2E: real ASGI server on loopback + real HTTP client, for in-memory and Redis backends, plus a client
-  pacing/backoff scenario against a real server round-trip.
+- E2E (`tests/e2e/`): `examples/fastapi_app.py`'s `create_app(backend)` served by `uvicorn` in a background thread on
+  loopback and hit by real `httpx`/`requests` clients, for in-memory, fakeredis and (env-gated) real Redis, plus a
+  client pacing/backoff scenario against a real server round-trip. The fake clock is shared with the server thread.
 - CI: GitHub Actions matrix, `ruff check`, `mypy src`, `pytest --cov=rate_limiter`; `fakeredis` by default, an
   optional non-blocking job with a real Redis service for integration tests.
 - Packaging: extras `fastapi`, `redis`, `httpx`, `requests`, `dev`, `all`; resolve the PyPI distribution name

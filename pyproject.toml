@@ -27,6 +27,7 @@ dev = [
     "fastapi>=0.100",
     "httpx>=0.24",
     "requests>=2.28",
+    "uvicorn",
     "types-requests",
 ]
 
@@ -34,7 +35,7 @@ dev = [
 packages = ["src/rate_limiter"]
 
 [tool.ruff]
-src = ["src", "tests"]
+src = ["src", "tests", "."]
 line-length = 100
 
 [tool.mypy]
@@ -43,6 +44,7 @@ files = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 asyncio_mode = "strict"
 markers = [
     "integration: needs a real Redis; set RATE_LIMITER_REDIS_URL to run (skipped otherwise)",
