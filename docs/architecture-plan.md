@@ -27,13 +27,15 @@ src/rate_limiter/
 │   └── redis.py         # RedisBackend (optional extra, Lua scripts)
 ├── server/              # optional extra: fastapi
 │   ├── keys.py          # by_ip, by_header, by_route, combine
+│   ├── _headers.py      # X-RateLimit-* / Retry-After header contract shared by both
 │   ├── fastapi_dependency.py   # rate_limit() dependency
 │   └── fastapi_middleware.py   # RateLimitMiddleware (raw ASGI)
 └── client/
+    ├── _common.py       # shared by both decorators: response extractor, RateLimitExceeded
     ├── headers.py       # Retry-After / X-RateLimit-* parsing
     ├── backoff.py       # RetryPolicy, is_rate_limited_response
     ├── decorator.py     # rate_limited (sync)
-    └── async_decorator.py      # async_rate_limited (needs an async HTTP lib)
+    └── async_decorator.py      # async_rate_limited
 ```
 
 ## Module boundaries
@@ -96,11 +98,12 @@ backend — not the algorithm — owns atomic load → update → persist per ke
 ```python
 class RateLimiter:
     def __init__(self, algorithm, backend, key_prefix="ratelimit")
-    def check(self, key, cost=1) -> RateLimitResult
-    async def acheck(self, key, cost=1) -> RateLimitResult
+    def check(self, key, cost=1, now=None) -> RateLimitResult
+    async def acheck(self, key, cost=1, now=None) -> RateLimitResult
 ```
 
-`time.time()` is read only here, at the outermost call site. Server and client both construct and hold this
+`time.time()` is read only here, at the outermost call site (an explicit `now` overrides it, for tests). Keys are
+prefixed as `<key_prefix>:<key>`. Server and client both construct and hold this
 same object.
 
 ## Client side (Epic 4)
@@ -112,8 +115,8 @@ same object.
   backoff with full jitter, capped, overridden by `Retry-After` when present.
 - `decorator.py` / `async_decorator.py`: `rate_limited` / `async_rate_limited`, usable as decorator or context
   manager. Two behaviors: **proactive** local throttling via `limiter.check` before the call, and **reactive**
-  retry on a 429 using parsed headers and `RetryPolicy`. A `response_extractor` (default: `.headers`) adapts to
-  the HTTP library.
+  retry on a 429 using parsed headers and `RetryPolicy`. A `response_extractor` (default: reads `status_code`/`status` and
+  `headers`) adapts to the HTTP library. As a context manager only the proactive part applies.
 
 ## Server side (Epic 5)
 

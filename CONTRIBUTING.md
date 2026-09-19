@@ -30,11 +30,12 @@ The base package has no dependencies. When working on an integration, install it
 | Area | Extra | Provides |
 | --- | --- | --- |
 | `server/` | `fastapi` | FastAPI / Starlette |
-| `backends/redis.py` | `redis` | `redis-py` (defined in `pyproject.toml`; `dev` also installs `fakeredis`) |
-| `client/async_decorator.py` | `httpx` | `httpx` |
+| `backends/redis.py` | `redis` | `redis-py` (`dev` also installs `fakeredis`) |
+| `examples/client_async_httpx.py` | `httpx` | `httpx` |
+| `examples/client_sync_requests.py` | `requests` | `requests` |
 
-Only the `redis` extra is defined in `pyproject.toml` so far; the others are placeholders until the packaging
-issue (#40), so for now install those libraries directly (e.g. `pip install fastapi`).
+`dev` installs all of these, so `pip install -e ".[dev]"` is enough to run every test and example. An `all` extra
+is still planned with the packaging issue (#40).
 
 Redis tests run against `fakeredis` by default. To also run the `integration`-marked cases against a real Redis,
 set `RATE_LIMITER_REDIS_URL` (e.g. `redis://localhost:6379/15`; the database is flushed).

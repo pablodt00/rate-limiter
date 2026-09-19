@@ -5,73 +5,133 @@ A rate-limiting library for Python, for both protecting a server and calling rat
 - **Server side:** protect a FastAPI app from too many incoming requests.
 - **Client side:** pace and back off calls to third-party APIs so you don't trip their limits.
 
-Both share one core: an algorithm decides, a backend stores state, and a small facade ties them together.
-
-## Status
-
-Work in progress. Here is what exists today:
-
-| Area | Status |
-| --- | --- |
-| Core algorithms (token bucket, sliding window, fixed window) | Done |
-| Storage backends (in-memory, Redis) | Done |
-| `RateLimiter` facade | Planned |
-| Client-side helpers (header parsing, backoff, decorators) | Planned |
-| FastAPI integration (dependency, middleware) | Planned |
+Both share one core: an algorithm decides, a backend stores state, and a small facade (`RateLimiter`) ties them
+together.
 
 ## Install
 
 Requires Python 3.10+. Not published yet, so install from a checkout:
 
 ```bash
-pip install -e .
+pip install -e .                 # core + in-memory backend, no third-party dependencies
+pip install -e ".[redis]"        # Redis backend
+pip install -e ".[fastapi]"      # FastAPI dependency and middleware
+pip install -e ".[httpx]"        # only needed to run the async client example
+pip install -e ".[requests]"     # only needed to run the sync client example
 ```
 
-For the Redis backend, install the extra: `pip install -e ".[redis]"`. Extras for FastAPI and async HTTP clients
-are planned; see [CONTRIBUTING.md](CONTRIBUTING.md).
+The decorators work with any HTTP library, so the `httpx` and `requests` extras are just for the examples.
+A plain `import rate_limiter` never needs any extra.
 
-## Using the algorithms
+## Quick start: protect a FastAPI app
 
-Algorithms are pure: you hand them the previous state and the current time, and they return the new state and a
-result. They never read the clock, so they are easy to test with made-up timestamps.
-
-```python
-from rate_limiter.core import TokenBucket
-
-bucket = TokenBucket(rate=1, capacity=3)  # 1 token per second, bursts of up to 3
-state = None
-for now in (0, 0, 0, 0, 2):
-    state, result = bucket.check_and_update(state, now)
-    print(now, result.allowed, result.remaining, result.retry_after)
-```
-
-`SlidingWindowCounter(limit, window_seconds)` and `FixedWindowCounter(limit, window_seconds)` work the same way.
-A request whose cost can never fit is denied with `retry_after=None`.
-
-## Using a backend
-
-A backend keeps each key's state and applies an algorithm to it atomically, so concurrent callers can't slip past
-the limit. `InMemoryBackend` is stdlib-only and process-local; `RedisBackend` shares limits across processes.
+A global per-IP limit with a middleware, plus a stricter per-API-key limit on one route. Full version in
+[`examples/fastapi_app.py`](examples/fastapi_app.py); run it with `uvicorn examples.fastapi_app:app`.
 
 ```python
-import time
+from fastapi import Depends, FastAPI
 
 from rate_limiter.backends import InMemoryBackend
-from rate_limiter.core import FixedWindowCounter
+from rate_limiter.core import FixedWindowCounter, TokenBucket
+from rate_limiter.core.limiter import RateLimiter
+from rate_limiter.server.fastapi_dependency import rate_limit
+from rate_limiter.server.fastapi_middleware import RateLimitMiddleware
+from rate_limiter.server.keys import by_header, by_ip
 
 backend = InMemoryBackend()
-limit = FixedWindowCounter(limit=2, window_seconds=60)
-for _ in range(3):
-    print(backend.increment("user:42", limit, now=time.time()).allowed)  # True, True, False
+per_ip = RateLimiter(TokenBucket(rate=5, capacity=10), backend, key_prefix="ip")
+per_api_key = RateLimiter(FixedWindowCounter(limit=3, window_seconds=10), backend, key_prefix="key")
+
+app = FastAPI()
+app.add_middleware(RateLimitMiddleware, limiter=per_ip, key_func=by_ip, exempt_paths=["/health"])
+
+
+@app.get(
+    "/limited", dependencies=[Depends(rate_limit(per_api_key, key_func=by_header("X-API-Key")))]
+)
+def limited() -> dict[str, str]:
+    return {"message": "ok"}
 ```
 
-`RedisBackend(redis.Redis(), async_client=redis.asyncio.Redis())` (from `rate_limiter.backends.redis`) takes
-clients you have already built; the async client is only needed for `aincrement`. Both backends also offer
-`peek` (look without consuming) and `reset`.
+Every response carries `X-RateLimit-Limit`, `X-RateLimit-Remaining` and `X-RateLimit-Reset`. Callers over their
+allowance get a `429` with `Retry-After`. Key functions decide who is who: `by_ip`, `by_header(name)`,
+`by_route` and `combine(...)` are included, and any function that takes a request and returns a string works.
+
+## Quick start: call a rate-limited API
+
+`rate_limited` waits locally until your own limiter allows the call, and if the API still answers `429` it backs
+off (using `Retry-After` when sent) and tries again. Runnable versions:
+[`examples/client_sync_requests.py`](examples/client_sync_requests.py) and
+[`examples/client_async_httpx.py`](examples/client_async_httpx.py).
+
+```python
+import requests
+
+from rate_limiter.backends import InMemoryBackend
+from rate_limiter.client.backoff import RetryPolicy
+from rate_limiter.client.decorator import rate_limited
+from rate_limiter.core import TokenBucket
+from rate_limiter.core.limiter import RateLimiter
+
+limiter = RateLimiter(TokenBucket(rate=2, capacity=2), InMemoryBackend())
+
+
+@rate_limited(limiter, key="some-api", retry_policy=RetryPolicy(max_retries=3))
+def fetch() -> requests.Response:
+    return requests.get("https://api.example.com/items")
+```
+
+For `async def` code use `async_rate_limited` from `rate_limiter.client.async_decorator`; it works the same way.
+Both can also be used as a context manager (`with rate_limited(...):`), which only does the local waiting. If a
+response is not a `requests`, `httpx` or `aiohttp` one, pass `response_extractor` to say where the status code
+and headers are. The header parsing (`parse_retry_after`, `parse_rate_limit_headers`) is also usable on its own
+and can be taught new vendor header names with `register_header_aliases`.
+
+## Choosing a backend
+
+| Backend | Use it when |
+| --- | --- |
+| `InMemoryBackend` | One process (a single worker, a script, tests). Nothing to install, but limits are not shared between processes. |
+| `RedisBackend` | Several workers or servers must share one limit. Needs `redis`; you pass in clients you already built. |
+
+```python
+import redis
+from rate_limiter.backends.redis import RedisBackend
+
+backend = RedisBackend(redis.Redis())  # add async_client=redis.asyncio.Redis() to use acheck
+```
+
+## Choosing an algorithm
+
+| Algorithm | Good for |
+| --- | --- |
+| `TokenBucket(rate, capacity)` | Allowing short bursts while holding a steady average, e.g. pacing API calls. |
+| `SlidingWindowCounter(limit, window_seconds)` | Smooth "N per window" limits without the boundary spike of a fixed window. Approximate, tiny state. |
+| `FixedWindowCounter(limit, window_seconds)` | Simple quotas like "1000 per day". Windows are aligned to the clock, so a caller can use two windows' worth around a boundary. |
+
+Algorithms are pure functions: hand them the previous state and the current time and they return the new state
+and a result, so they are easy to test with made-up timestamps. Denied requests consume nothing, and a request
+whose cost can never fit is denied with `retry_after=None`.
+
+## Using the facade directly
+
+```python
+from rate_limiter.backends import InMemoryBackend
+from rate_limiter.core import FixedWindowCounter
+from rate_limiter.core.limiter import RateLimiter
+
+limiter = RateLimiter(FixedWindowCounter(limit=2, window_seconds=60), InMemoryBackend())
+for _ in range(3):
+    print(limiter.check("user:42").allowed)  # True, True, False
+```
+
+`check` and `acheck` read the clock so nothing else has to. Backends also offer `peek` (look without consuming)
+and `reset`.
 
 ## Learn more
 
-- [Architecture plan](docs/architecture-plan.md): the design and planned modules.
+- [Examples](examples/): three runnable scripts for the quick starts above.
+- [Architecture plan](docs/architecture-plan.md): the design and modules.
 - [Contributing](CONTRIBUTING.md): setup, checks and conventions.
 
 ## License
