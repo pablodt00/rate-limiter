@@ -1,4 +1,4 @@
-"""Redis backend (optional extra: ``rate-limiter[redis]``).
+"""Redis backend (optional extra: ``fastapi-ratelimit-kit[redis]``).
 
 Each algorithm is re-implemented as a Lua script so the whole load-decide-persist step runs atomically inside
 Redis (``MULTI``/``EXEC`` cannot express read-then-conditionally-write without a slow ``WATCH`` retry loop).

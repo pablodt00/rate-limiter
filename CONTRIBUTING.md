@@ -39,13 +39,24 @@ The base package has no dependencies. When working on an integration, install it
 | `examples/client_async_httpx.py` | `httpx` | `httpx` |
 | `examples/client_sync_requests.py` | `requests` | `requests` |
 
-`dev` installs all of these, so `pip install -e ".[dev]"` is enough to run every test and example. An `all` extra
-is still planned with the packaging issue (#40).
+`dev` installs all of these, so `pip install -e ".[dev]"` is enough to run every test and example. The `all` extra
+installs every optional integration (fastapi, redis, httpx, requests) without the dev tooling.
 
 Redis tests (including the E2E ones) run against `fakeredis` by default. To also run the `integration`-marked cases
 against a real Redis, set `RATE_LIMITER_REDIS_URL` (e.g. `redis://localhost:6379/15`; the database is flushed).
 
 Keep imports of optional dependencies lazy so `import rate_limiter` works without them.
+
+## CI
+
+`.github/workflows/ci.yml` runs `ruff check`, `mypy src` and `pytest --cov=rate_limiter` on Python 3.10–3.13 for
+every push to `master` and every PR. A separate, non-blocking job runs the `integration` tests against a Redis
+service container.
+
+## Publishing
+
+The PyPI distribution name is `fastapi-ratelimit-kit` (`rate-limiter` is already taken; the new name was checked
+as free on 2026-09-20). The import package stays `rate_limiter`.
 
 ## Branches and PRs
 
