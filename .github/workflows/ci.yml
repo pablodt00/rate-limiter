@@ -29,7 +29,7 @@ jobs:
       - run: ruff check
       - run: mypy src
       - run: pytest --cov=rate_limiter --cov-report=xml
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ matrix.python-version }}
           path: coverage.xml
