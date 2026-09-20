@@ -1,5 +1,9 @@
 # rate-limiter
 
+[![CI](https://github.com/pablodt00/rate-limiter/actions/workflows/ci.yml/badge.svg)](https://github.com/pablodt00/rate-limiter/actions/workflows/ci.yml)
+![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 A rate-limiting library for Python, for both protecting a server and calling rate-limited APIs politely.
 
 - **Server side:** protect a FastAPI app from too many incoming requests.
@@ -115,10 +119,10 @@ whose cost can never fit is denied with `retry_after=None`.
 
 ## Using the facade directly
 
+The common building blocks are importable straight from `rate_limiter`.
+
 ```python
-from rate_limiter.backends import InMemoryBackend
-from rate_limiter.core import FixedWindowCounter
-from rate_limiter.core.limiter import RateLimiter
+from rate_limiter import FixedWindowCounter, InMemoryBackend, RateLimiter
 
 limiter = RateLimiter(FixedWindowCounter(limit=2, window_seconds=60), InMemoryBackend())
 for _ in range(3):
@@ -132,6 +136,7 @@ and `reset`.
 
 - [Examples](examples/): three runnable scripts for the quick starts above.
 - [Architecture plan](docs/architecture-plan.md): the design and modules.
+- [Changelog](CHANGELOG.md): what changed in each release.
 - [Contributing](CONTRIBUTING.md): setup, checks and conventions.
 
 ## License

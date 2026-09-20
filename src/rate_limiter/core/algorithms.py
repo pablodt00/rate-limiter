@@ -171,9 +171,8 @@ class SlidingWindowCounter:
             # Wait for the previous window's weight to decay within this window.
             needed_fraction = 1 - (self.limit - current - cost) / previous
             return max(0.0, needed_fraction * ws - elapsed)
-        # Wait for the next window, where today's count becomes the (decaying) previous count.
+        # Wait for the next window, where this count becomes the (decaying) previous count. ``current`` is
+        # positive here: with nothing counted in this window the request would have been allowed.
         time_to_next = ws - elapsed
-        if current == 0:
-            return time_to_next
         needed_fraction = min(1.0, max(0.0, 1 - (self.limit - cost) / current))
         return time_to_next + needed_fraction * ws

@@ -5,6 +5,13 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -22,6 +29,10 @@ jobs:
       - run: ruff check
       - run: mypy src
       - run: pytest --cov=rate_limiter --cov-report=xml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
 
   redis-integration:
     runs-on: ubuntu-latest

@@ -112,8 +112,6 @@ if (not allowed) and cost <= limit then
   if previous > 0 and current + cost <= limit then
     local needed = 1 - (limit - current - cost) / previous
     wait = math.max(0, needed * ws - elapsed)
-  elseif current == 0 then
-    wait = time_to_next
   else
     local needed = math.min(1, math.max(0, 1 - (limit - cost) / current))
     wait = time_to_next + needed * ws
